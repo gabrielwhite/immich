@@ -77,7 +77,8 @@ export class SearchService {
           { text: query },
           machineLearning.clip,
         );
-        assets = await this.smartInfoRepository.searchCLIP({ userIds: userIds, embedding, numResults: 100 });
+        const results = await this.smartInfoRepository.searchCLIP({ userIds, embedding }, { take: dto.take || 100 });
+        assets = results.items;
         break;
       case SearchStrategy.TEXT:
         assets = await this.assetRepository.searchMetadata(query, userIds, { numResults: 250 });
