@@ -46,7 +46,6 @@ export class SmartInfoRepository implements ISmartInfoRepository {
   async searchCLIP({ userIds, embedding, numResults }: EmbeddingSearch): Promise<AssetEntity[]> {
     let results: AssetEntity[] = [];
     await this.assetRepository.manager.transaction(async (manager) => {
-      await manager.query('SET LOCAL vectors.enable_prefilter=on; SET LOCAL vectors.search_mode=basic;');
 
       let query = manager
         .createQueryBuilder(AssetEntity, 'a')
@@ -59,13 +58,16 @@ export class SmartInfoRepository implements ISmartInfoRepository {
         .orderBy('s.embedding <=> :embedding')
         .setParameters({ userIds, embedding: asVector(embedding) });
 
+      let runtimeConfig = 'SET LOCAL vectors.enable_prefilter=on; SET LOCAL vectors.search_mode=basic;';
       if (numResults) {
         if (!isValidInteger(numResults, { min: 1 })) {
           throw new Error(`Invalid value for 'numResults': ${numResults}`);
         }
         query = query.limit(numResults);
+        runtimeConfig += ` SET LOCAL vectors.hnsw_ef_search = ${numResults}`;
       }
 
+      await manager.query(runtimeConfig);
       results = await query.getMany();
     });
 
